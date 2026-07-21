@@ -698,6 +698,12 @@ export interface TransformNodiffOptions {
   defineDCE: boolean | DefineDceVisitorConfig
   directiveDCE: boolean | DirectiveDceVisitorConfig
   worklet: boolean | WorkletVisitorConfig
+  /**
+   * @experimental
+   * Strip the main-thread output down to snapshot and worklet registrations.
+   * Only meaningful for the main-thread (LEPUS) transform.
+   */
+  mainThreadSnapshotOnly?: boolean
   dynamicImport?: boolean | DynamicImportVisitorConfig
   /** @internal */
   inject?: boolean | InjectVisitorConfig

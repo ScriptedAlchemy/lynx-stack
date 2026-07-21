@@ -327,6 +327,22 @@ export interface PluginReactLynxOptions {
   experimental_useElementTemplate?: boolean
 
   /**
+   * Strip the main-thread bundle down to snapshot and worklet registrations.
+   *
+   * All business logic (component functions, hooks and module side effects)
+   * is removed from the main-thread bundle and runs only on the background
+   * thread. The first frame is empty and the UI is rendered by the background
+   * thread through hydration.
+   *
+   * Modules inside `node_modules` and the ReactLynx runtime are not stripped,
+   * so dependencies keep working and the main-thread boot stays intact.
+   *
+   * @defaultValue `false`
+   * @experimental
+   */
+  experimental_mainThreadSnapshotOnly?: boolean
+
+  /**
    * Optimize bundle size by removing unused code by Minify.mainThreadOptions and Minify.backgroundOptions.
    *
    * When optimizeBundleSize or optimizeBundleSize.mainThread is true, main-thread code will be optimized.
@@ -391,6 +407,7 @@ export function pluginReactLynx(
 
     experimental_isLazyBundle: false,
     experimental_useElementTemplate: false,
+    experimental_mainThreadSnapshotOnly: false,
     optimizeBundleSize: false,
     enableUiSourceMap: false,
   }

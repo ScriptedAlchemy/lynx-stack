@@ -1,0 +1,26 @@
+// Vitest Snapshot v1, https://vitest.dev/guide/snapshot.html
+
+exports[`mainThreadSnapshotOnly > should keep only snapshot registrations on the main thread 1`] = `
+"import * as ReactLynx from "@lynx-js/react/internal";
+import "@lynx-js/react";
+import "my-monitor";
+const __snapshot_a94a8_test_1 = "__snapshot_a94a8_test_1";
+ReactLynx.snapshotCreatorMap[__snapshot_a94a8_test_1] = (__snapshot_a94a8_test_1)=>ReactLynx.createSnapshot(__snapshot_a94a8_test_1, function() {
+        const pageId = ReactLynx.__pageId;
+        const el = __CreateView(pageId);
+        const el1 = __CreateText(pageId);
+        __AppendElement(el, el1);
+        return [
+            el,
+            el1
+        ];
+    }, [
+        (snapshot, index, oldValue)=>ReactLynx.updateEvent(snapshot, index, oldValue, 1, "bindEvent", "tap", '')
+    ], [
+        [
+            ReactLynx.__DynamicPartSlotV2,
+            1
+        ]
+    ], undefined, globDynamicComponentEntry, null, true);
+"
+`;

@@ -1,6 +1,7 @@
 // Copyright 2024 The Lynx Authors. All rights reserved.
 // Licensed under the Apache License Version 2.0 that can be found in the
 // LICENSE file in the root directory of this source tree.
+import fs from 'node:fs';
 import path from 'node:path';
 
 import type { LoaderContext } from '@rspack/core';
@@ -102,10 +103,63 @@ export interface ReactLoaderOptions {
    * @experimental
    */
   experimental_useElementTemplate?: boolean | undefined;
+
+  /**
+   * Whether to strip the main-thread bundle down to snapshot and worklet
+   * registrations, leaving all business logic to the background thread.
+   *
+   * @experimental
+   */
+  experimental_mainThreadSnapshotOnly?: boolean | undefined;
 }
 
 function normalizeSlashes(file: string) {
   return file.replaceAll(path.win32.sep, '/');
+}
+
+// The ReactLynx runtime must keep its boot side effects (e.g. `renderPage`
+// registration) even when `experimental_mainThreadSnapshotOnly` is enabled.
+// Installed dependencies are matched by `node_modules`; the workspace-linked
+// runtime of this monorepo is matched by its package name.
+const SNAPSHOT_ONLY_EXEMPT_PACKAGES = new Set([
+  PUBLIC_RUNTIME_PKG,
+  '@lynx-js/react-runtime',
+]);
+
+const nearestPackageNameCache = new Map<string, string | undefined>();
+
+function nearestPackageName(dir: string): string | undefined {
+  if (nearestPackageNameCache.has(dir)) {
+    return nearestPackageNameCache.get(dir);
+  }
+  let result: string | undefined;
+  const packageJsonPath = path.join(dir, 'package.json');
+  if (fs.existsSync(packageJsonPath)) {
+    try {
+      result = (JSON.parse(fs.readFileSync(packageJsonPath, 'utf-8')) as {
+        name?: string;
+      }).name;
+    } catch {
+      // ignore unreadable package.json
+    }
+  }
+  if (result === undefined) {
+    const parent = path.dirname(dir);
+    if (parent !== dir) {
+      result = nearestPackageName(parent);
+    }
+  }
+  nearestPackageNameCache.set(dir, result);
+  return result;
+}
+
+function shouldStripToSnapshotOnly(resourcePath: string): boolean {
+  if (normalizeSlashes(resourcePath).includes('/node_modules/')) {
+    return false;
+  }
+  const packageName = nearestPackageName(path.dirname(resourcePath));
+  return packageName === undefined
+    || !SNAPSHOT_ONLY_EXEMPT_PACKAGES.has(packageName);
 }
 
 function getCommonOptions(
@@ -240,7 +294,7 @@ export function getMainThreadTransformOptions(
 ): TransformNodiffOptions {
   const commonOptions = getCommonOptions.call(this, inputSourceMap);
 
-  const { shake } = this.getOptions();
+  const { shake, experimental_mainThreadSnapshotOnly } = this.getOptions();
   const useElementTemplate = typeof commonOptions.elementTemplate === 'object';
 
   return {
@@ -323,6 +377,8 @@ export function getMainThreadTransformOptions(
       ...commonOptions.worklet,
       target: 'LEPUS',
     },
+    mainThreadSnapshotOnly: (experimental_mainThreadSnapshotOnly ?? false)
+      && shouldStripToSnapshotOnly(this.resourcePath),
     directiveDCE: {
       target: 'LEPUS',
     },

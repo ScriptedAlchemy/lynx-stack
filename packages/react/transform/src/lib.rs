@@ -7,6 +7,7 @@ mod bundle;
 mod esbuild;
 mod swc_plugin_compat_post;
 mod swc_plugin_extract_str;
+mod swc_plugin_main_thread_snapshot_only;
 mod swc_plugin_refresh;
 mod swc_plugin_worklet_post_process;
 
@@ -60,6 +61,7 @@ use swc_plugin_element_template::napi::{
 };
 use swc_plugin_element_template::ElementTemplateAsset as CoreElementTemplateAsset;
 use swc_plugin_inject::napi::{InjectVisitor, InjectVisitorConfig};
+use swc_plugin_main_thread_snapshot_only::MainThreadSnapshotOnlyVisitor;
 use swc_plugin_refresh::{RefreshVisitor, RefreshVisitorConfig};
 use swc_plugin_shake::napi::{ShakeVisitor, ShakeVisitorConfig};
 use swc_plugin_snapshot::{
@@ -218,6 +220,11 @@ pub struct TransformNodiffOptions {
   #[napi(js_name = "directiveDCE")]
   pub directive_dce: Either<bool, DirectiveDCEVisitorConfig>,
   pub worklet: Either<bool, WorkletVisitorConfig>,
+  /// @experimental
+  /// Strip the main-thread output down to snapshot and worklet registrations.
+  /// Only meaningful for the main-thread (LEPUS) transform.
+  #[napi(js_name = "mainThreadSnapshotOnly")]
+  pub main_thread_snapshot_only: Option<bool>,
   pub dynamic_import: Option<Either<bool, DynamicImportVisitorConfig>>,
   /// @internal
   pub inject: Option<Either<bool, InjectVisitorConfig>>,
@@ -246,6 +253,7 @@ impl Default for TransformNodiffOptions {
       define_dce: Either::A(false),
       directive_dce: Either::A(false),
       worklet: Either::A(false),
+      main_thread_snapshot_only: None,
       dynamic_import: Some(Either::B(Default::default())),
       inject: Some(Either::A(false)),
       input_source_map: None,
@@ -384,12 +392,17 @@ fn transform_react_lynx_inner(
     let top_level_mark = Mark::new();
     let top_retain = WEBPACK_VARS.iter().map(|&s| s.into()).collect::<Vec<_>>();
 
+    // With `mainThreadSnapshotOnly`, side-effect imports are what keeps every
+    // module contributing its snapshot registrations to the main-thread
+    // bundle, so simplify must not drop them.
+    let main_thread_snapshot_only = options.main_thread_snapshot_only.unwrap_or(false);
+
     let simplify_pass_1 = Optional::new(
       simplifier(
         top_level_mark,
         simplify::Config {
           dce: simplify::dce::Config {
-            preserve_imports_with_side_effects: false,
+            preserve_imports_with_side_effects: main_thread_snapshot_only,
             top_retain: top_retain.clone(),
             ..Default::default()
           },
@@ -619,7 +632,7 @@ fn transform_react_lynx_inner(
       top_level_mark,
       simplify::Config {
         dce: simplify::dce::Config {
-          preserve_imports_with_side_effects: false,
+          preserve_imports_with_side_effects: main_thread_snapshot_only,
           top_retain: top_retain.clone(),
           ..Default::default()
         },
@@ -740,6 +753,13 @@ fn transform_react_lynx_inner(
         legacy_list_plugin,
         snapshot_plugin,
         element_template_plugin,
+        // Runs before the DCE passes below: it is itself the DCE for this
+        // mode, and it must see the imports before simplify can remove unused
+        // ones so it can keep the module graph alive via side-effect imports.
+        Optional::new(
+          visit_mut_pass(MainThreadSnapshotOnlyVisitor),
+          main_thread_snapshot_only,
+        ),
       ),
       directive_dce_plugin,
       define_dce_plugin,

@@ -54,6 +54,7 @@ function getLoaderOptions(
 
     experimental_isLazyBundle,
     experimental_useElementTemplate,
+    experimental_mainThreadSnapshotOnly,
   } = options
 
   return {
@@ -68,6 +69,7 @@ function getLoaderOptions(
       ? {
         enableUiSourceMap,
         shake,
+        experimental_mainThreadSnapshotOnly,
       }
       : {},
   }
