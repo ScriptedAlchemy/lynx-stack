@@ -1,5 +1,11 @@
 # @lynx-js/react
 
+## 0.123.1
+
+### Patch Changes
+
+- refactor type of createElement and cloneElement ([#2995](https://github.com/lynx-family/lynx-stack/pull/2995))
+
 ## 0.123.0
 
 ### Minor Changes

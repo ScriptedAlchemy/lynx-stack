@@ -1,5 +1,11 @@
 # @lynx-js/web-elements
 
+## 0.12.7
+
+### Patch Changes
+
+- Fix x-text custom truncation when inline x-view elements are included in the measured text. ([#2998](https://github.com/lynx-family/lynx-stack/pull/2998))
+
 ## 0.12.6
 
 ### Patch Changes

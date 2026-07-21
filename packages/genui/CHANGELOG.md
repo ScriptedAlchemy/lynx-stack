@@ -1,5 +1,11 @@
 # @lynx-js/genui
 
+## 0.2.0
+
+### Minor Changes
+
+- Add an A2UI `McpApp` catalog component that embeds trusted MCP Apps Lynx bundles through `frame`. ([#3001](https://github.com/lynx-family/lynx-stack/pull/3001))
+
 ## 0.1.0
 
 ### Minor Changes
