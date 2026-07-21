@@ -19,6 +19,7 @@ import { extractListItemPlatformInfo, platformInfoAttributes, updateListItemPlat
 import { transformRef, updateRef } from './ref.js';
 import { updateWorkletEvent } from './workletEvent.js';
 import { updateWorkletRef } from './workletRef.js';
+import { normalizeCamelCaseAttributeName } from '../../shared/attribute-name.js';
 import { isDirectOrDeepEqual, isEmptyObject } from '../../utils.js';
 import { retainGestureWorkletCtx } from '../gesture/processGesture.js';
 import type { GestureKind } from '../gesture/types.js';
@@ -354,11 +355,14 @@ function transformSpread(
       result[key] = `${snapshot.__id}:${index}:${key}`;
     } else if (key === '__self' || key === '__source') {
       // for react debug tools
+    } else if (eventRegExp.test(key)) {
+      result[key] = value;
     } else {
-      if (!hasNoFlattenAttributes && noFlattenAttributes.has(key)) {
+      const normalizeKey = __ENABLE_CAMEL_CASE_ATTRIBUTES__ ? normalizeCamelCaseAttributeName(key) : key;
+      if (!hasNoFlattenAttributes && noFlattenAttributes.has(normalizeKey)) {
         hasNoFlattenAttributes = true;
       }
-      result[key] = value;
+      result[normalizeKey] = value;
     }
   }
 
